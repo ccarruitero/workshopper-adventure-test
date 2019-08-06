@@ -3,6 +3,11 @@ var assert = require('assert')
 var path = require('path')
 var _ = require('lodash')
 var wUtil = require('workshopper-adventure/util')
+try {
+  var config = require(`${process.cwd()}/.workshopper-adventure-test-config.js`);
+} catch(_) {
+  var config = {};
+}
 
 function getExercises (done) {
   exec.async(['list'], function (err, stdout, stderr) {
@@ -46,13 +51,16 @@ describe('Testing exercises', function () {
   exercises.map(function (exercise) {
     return wUtil.idFromName(exercise)
   }).forEach(function (id, nr) {
-    var folder = path.join(process.cwd(), 'test', id)
-    var allFiles = require('glob').sync('*.*', {
+    var folder = path.join(process.cwd(), config.exercisesFolder || 'test', id)
+    var allFiles = require('glob').sync(config.files || '*.*', {
       cwd: folder
     })
 
     allFiles.filter(function (file) {
-      return /^(in)?valid(-|_)?(\d*)?\.\w+/.test(file)
+      var fileName = file.slice(file.lastIndexOf('/') +1);
+      var validRegex = config.validRegex || /^(in)?valid(-|_)?(\d*)?\.\w+/;
+      var re = new RegExp(validRegex);
+      return re.test(file)
     }).forEach(function (file, fileNr) {
       it('./' + path.relative(process.cwd(), path.join(folder, file)) + ' (' + nr + ':' + fileNr + ')\t ', function (done) {
         exec.async(['select', id], function (err, stdout, stderr) {
